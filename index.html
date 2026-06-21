@@ -25,6 +25,7 @@
     background: var(--rl-light);
     color: var(--rl-navy);
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
   header {
@@ -43,11 +44,11 @@
   header h1 { font-family: var(--font-head); font-size: 17px; font-weight: 600; color: var(--rl-navy); }
   header p { font-size: 12px; color: #94a3b8; margin-top: 1px; }
 
-  main { padding: 24px 32px; max-width: 1280px; margin: 0 auto; }
+  main { padding: 24px 32px; max-width: 1280px; margin: 0 auto; overflow-x: hidden; }
 
   .layout {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 320px minmax(0, 1fr);
     gap: 24px;
     align-items: start;
   }
@@ -151,14 +152,15 @@
     border-radius: 12px;
     overflow: hidden;
     margin-bottom: 20px;
+    max-width: 100%;
   }
 
-  .timeline-scroll { overflow-x: auto; }
+  .timeline-scroll { overflow-x: auto; max-width: 100%; }
 
   .timeline-grid {
     display: grid;
-    grid-template-columns: 170px repeat(20, 44px);
-    min-width: 1050px;
+    grid-template-columns: 170px repeat(20, 38px);
+    min-width: 900px;
   }
 
   .tl-corner {
@@ -372,8 +374,8 @@ const ROOMS_META = [
 ];
 
 const DOW = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-const HOUR_START = 7;  // 7h
-const HOUR_END = 19;   // 19h (12h range -> 20 columns of 30min... we'll do 30min increments)
+const HOUR_START = 8;  // 8h
+const HOUR_END = 18;   // 18h
 
 let viewMonth = new Date(); // month being shown in mini calendar
 let selectedDate = new Date(); // currently selected day
@@ -462,7 +464,7 @@ function formatTime(isoStr) {
 function renderTimeline(rooms) {
   const grid = document.getElementById('timeline-grid');
   const totalSlots = (HOUR_END - HOUR_START) * 2; // 30-min slots
-  grid.style.gridTemplateColumns = `170px repeat(${totalSlots}, 44px)`;
+  grid.style.gridTemplateColumns = `170px repeat(${totalSlots}, 38px)`;
   grid.innerHTML = '';
 
   // header row
