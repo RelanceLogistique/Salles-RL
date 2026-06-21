@@ -36,9 +36,9 @@
     gap: 16px;
   }
 
-  header img { height: 38px; }
+  header img { height: 32px; display: block; }
 
-  header .title-block { border-left: 1px solid var(--rl-border); padding-left: 16px; }
+  header .title-block { border-left: 1px solid var(--rl-border); padding-left: 16px; display: flex; flex-direction: column; justify-content: center; }
 
   header h1 { font-family: var(--font-head); font-size: 17px; font-weight: 600; color: var(--rl-navy); }
   header p { font-size: 12px; color: #94a3b8; margin-top: 1px; }
@@ -206,6 +206,23 @@
     width: 8px; height: 8px; border-radius: 50%; background: var(--rl-accent);
   }
 
+  .slot-tooltip {
+    position: fixed;
+    background: var(--rl-navy);
+    color: white;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 50;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    white-space: nowrap;
+    display: none;
+  }
+  .slot-tooltip strong { font-weight: 600; }
+
+  .tl-cell.busy-block { cursor: pointer; }
+
   /* ===== Room list cards (detail under timeline) ===== */
   .rooms-grid {
     display: grid;
@@ -342,6 +359,8 @@
 
 <footer>Relance Logistique · Brossard · Pour toute question : soutienti@relancelogistique.com</footer>
 
+<div class="slot-tooltip" id="slot-tooltip"></div>
+
 <script>
 const API_URL = 'https://falling-darkness-2379.soutienti.workers.dev';
 
@@ -471,25 +490,28 @@ function renderTimeline(rooms) {
     nameCell.innerHTML = `<div class="rn">${room.name}</div><div class="rc">👥 ${room.capacity} pers.</div>`;
     grid.appendChild(nameCell);
 
-    // build busy slot set
-    const busySlots = new Set();
+    // build busy slot set with event info
+    const busySlotInfo = {}; // slot index -> {start, end}
     if (!room.error) {
       room.events.forEach(ev => {
         const s = new Date(ev.start.dateTime + 'Z');
         const e = new Date(ev.end.dateTime + 'Z');
         let startFloat = s.getHours() + s.getMinutes() / 60;
         let endFloat = e.getHours() + e.getMinutes() / 60;
-        startFloat = Math.max(startFloat, HOUR_START);
-        endFloat = Math.min(endFloat, HOUR_END);
-        const startSlot = Math.floor((startFloat - HOUR_START) * 2);
-        const endSlot = Math.ceil((endFloat - HOUR_START) * 2);
-        for (let i = startSlot; i < endSlot; i++) busySlots.add(i);
+        const clampedStart = Math.max(startFloat, HOUR_START);
+        const clampedEnd = Math.min(endFloat, HOUR_END);
+        const startSlot = Math.floor((clampedStart - HOUR_START) * 2);
+        const endSlot = Math.ceil((clampedEnd - HOUR_START) * 2);
+        for (let i = startSlot; i < endSlot; i++) {
+          busySlotInfo[i] = { start: ev.start.dateTime, end: ev.end.dateTime };
+        }
       });
     }
 
     for (let s = 0; s < totalSlots; s++) {
       const cell = document.createElement('div');
-      cell.className = 'tl-cell ' + (busySlots.has(s) ? 'busy-block' : 'free');
+      const info = busySlotInfo[s];
+      cell.className = 'tl-cell ' + (info ? 'busy-block' : 'free');
       if (nowOffsetSlot !== null && s === Math.floor(nowOffsetSlot)) {
         const line = document.createElement('div');
         line.className = 'now-line';
@@ -497,9 +519,34 @@ function renderTimeline(rooms) {
         line.style.left = pct + '%';
         cell.appendChild(line);
       }
+      if (info) {
+        cell.addEventListener('mouseenter', (e) => showTooltip(e, room.name, info));
+        cell.addEventListener('mousemove', moveTooltip);
+        cell.addEventListener('mouseleave', hideTooltip);
+        cell.addEventListener('click', (e) => showTooltip(e, room.name, info));
+      }
       grid.appendChild(cell);
     }
   });
+}
+
+function showTooltip(e, roomName, info) {
+  const tip = document.getElementById('slot-tooltip');
+  const start = formatTime(info.start);
+  const end = formatTime(info.end);
+  tip.innerHTML = `<strong>${roomName}</strong><br>Occupée ${start} – ${end}`;
+  tip.style.display = 'block';
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const tip = document.getElementById('slot-tooltip');
+  tip.style.left = (e.clientX + 14) + 'px';
+  tip.style.top = (e.clientY + 14) + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('slot-tooltip').style.display = 'none';
 }
 
 function elDiv(cls, text) {
@@ -586,7 +633,7 @@ async function loadAll() {
 
 renderCalendar();
 loadAll();
-setInterval(loadAll, 5 * 60 * 1000);
+setInterval(loadAll, 60 * 1000); // Actualise chaque minute
 </script>
 </body>
 </html>
