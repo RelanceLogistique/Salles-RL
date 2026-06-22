@@ -54,9 +54,8 @@
   }
 
   @media (max-width: 900px) {
-    .layout { grid-template-columns: minmax(0, 1fr); }
+    .layout { grid-template-columns: 1fr; }
   }
-  .right-col { min-width: 0; }
 
   /* ===== Calendar widget ===== */
   .cal-card {
@@ -154,7 +153,6 @@
     overflow: hidden;
     margin-bottom: 20px;
     max-width: 100%;
-    min-width: 0;
     position: relative;
   }
 
@@ -286,10 +284,13 @@
 
   .empty-day { padding: 10px 0; text-align: center; color: #94a3b8; font-size: 12px; }
 
+  .slot-organizer { font-size: 11px; color: #64748b; margin-left: auto; }
+
   .email-hint {
-    font-size: 10px; color: #94a3b8;
+    font-size: 11px; color: #94a3b8;
     margin-top: 10px; padding-top: 10px;
     border-top: 1px solid var(--rl-border);
+    font-weight: 700;
   }
 
   .how-to {
@@ -320,7 +321,7 @@
 
     main { padding: 14px 14px; }
 
-    .layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .layout { grid-template-columns: 1fr; gap: 16px; }
 
     .cal-card { padding: 14px; }
     .cal-day { font-size: 12px; }
@@ -372,7 +373,7 @@
     </div>
 
     <!-- Right side -->
-    <div class="right-col">
+    <div>
       <div class="panel-header">
         <div id="selected-date-label">—</div>
         <button class="refresh-btn" onclick="loadAll()">↻ Actualiser</button>
@@ -535,8 +536,7 @@ function renderTimeline(rooms) {
     nameCell.innerHTML = `<div class="rn">${room.name}</div><div class="rc">👥 ${room.capacity} pers.</div>`;
     grid.appendChild(nameCell);
 
-    // build busy slot set with event info
-    const busySlotInfo = {}; // slot index -> {start, end}
+    const busySlotInfo = {}; // slot index -> {start, end, organizer}
     if (!room.error) {
       room.events.forEach(ev => {
         const s = new Date(ev.start.dateTime + 'Z');
@@ -547,8 +547,9 @@ function renderTimeline(rooms) {
         const clampedEnd = Math.min(endFloat, HOUR_END);
         const startSlot = Math.floor((clampedStart - HOUR_START) * 2);
         const endSlot = Math.ceil((clampedEnd - HOUR_START) * 2);
+        const organizer = ev.organizer?.emailAddress?.address || null;
         for (let i = startSlot; i < endSlot; i++) {
-          busySlotInfo[i] = { start: ev.start.dateTime, end: ev.end.dateTime };
+          busySlotInfo[i] = { start: ev.start.dateTime, end: ev.end.dateTime, organizer };
         }
       });
     }
@@ -579,7 +580,8 @@ function showTooltip(e, roomName, info) {
   const tip = document.getElementById('slot-tooltip');
   const start = formatTime(info.start);
   const end = formatTime(info.end);
-  tip.innerHTML = `<strong>${roomName}</strong><br>Occupée ${start} – ${end}`;
+  const organizer = info.organizer ? `<br>👤 ${info.organizer}` : '';
+  tip.innerHTML = `<strong>${roomName}</strong><br>Occupée ${start} – ${end}${organizer}`;
   tip.style.display = 'block';
   moveTooltip(e);
 }
@@ -616,6 +618,7 @@ function renderRoomCard(room) {
       <div class="slot">
         <span class="slot-dot"></span>
         <span class="slot-time">${formatTime(e.start.dateTime)} – ${formatTime(e.end.dateTime)}</span>
+        ${e.organizer?.emailAddress?.address ? `<span class="slot-organizer">👤 ${e.organizer.emailAddress.address}</span>` : ''}
       </div>
     `).join('') + '</div>';
   }
